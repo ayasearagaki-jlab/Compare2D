@@ -72,12 +72,13 @@ class Between2D{
 		}
 		
 		void MakeTH2D();
+		void MakeReport();
 		void SetConfig_TDC_2coinCut(bool on=false,double width=6){
 			doTDC_2coinCut=on;
 			width_TDC_2coinCut=width;
 			std::stringstream ss;
-			ss << std::boolalpha<< "TDC_2coinCut is " << "\033[1m" << doTDC_2coinCut << "\033[0m"
-   				<< ", Width is " << width_TDC_2coinCut << " ns";
+			ss << std::boolalpha<< "TDC_2coinCut is " << "\033[1;32m" << doTDC_2coinCut << "\033[0m";
+   			if(doTDC_2coinCut)ss<< ", Width is " << width_TDC_2coinCut << " ns";
 
 			MYLOG_INFO(ss.str());
 		}
@@ -85,8 +86,8 @@ class Between2D{
     			doTDC_3coinCut = on;
     			width_TDC_3coinCut = width;
     			std::stringstream ss;
-    			ss << std::boolalpha << "TDC_3coinCut is \033[1m" << doTDC_3coinCut << "\033[0m"
-       				<< ", Width is " << width_TDC_3coinCut << " ns";
+    			ss << std::boolalpha << "TDC_3coinCut is \033[1;32m" << doTDC_3coinCut << "\033[0m";
+       			if(doTDC_3coinCut)ss<< ", Width is " << width_TDC_3coinCut << " ns";
     			MYLOG_INFO(ss.str());
 		}
 
@@ -94,8 +95,8 @@ class Between2D{
     			doExclude_2coinCut = on;
     			threshold_Exclude_2coinCut = threshold;
     			std::stringstream ss;
-    			ss << std::boolalpha << "Exclude_2coinCut is \033[1m" << doExclude_2coinCut << "\033[0m"
-       				<< ", Threshold is " << threshold_Exclude_2coinCut;
+    			ss << std::boolalpha << "Exclude_2coinCut is \033[1;32m" << doExclude_2coinCut << "\033[0m";
+       			if(doExclude_2coinCut)ss<< ", Threshold is " << threshold_Exclude_2coinCut<<" keV";
     			MYLOG_INFO(ss.str());
 		}
 
@@ -103,8 +104,8 @@ class Between2D{
     			doExclude_3coinCut = on;
     			threshold_Exclude_3coinCut = threshold;
     			std::stringstream ss;
-    			ss << std::boolalpha << "Exclude_3coinCut is \033[1m" << doExclude_3coinCut << "\033[0m"
-       				<< ", Threshold is " << threshold_Exclude_3coinCut;
+    			ss << std::boolalpha << "Exclude_3coinCut is \033[1;32m" << doExclude_3coinCut << "\033[0m";
+       			if(doExclude_3coinCut)ss<< ", Threshold is " << threshold_Exclude_3coinCut<<" keV";
     			MYLOG_INFO(ss.str());
 		}
 
@@ -112,8 +113,8 @@ class Between2D{
     			doTRG_Cut = on;
     			width_TRG_Cut = width;
     			std::stringstream ss;
-    			ss << std::boolalpha << "TRG_Cut is \033[1m" << doTRG_Cut << "\033[0m"
-       				<< ", Width is " << width_TRG_Cut << " ns";
+    			ss << std::boolalpha << "TRG_Cut is \033[1;32m" << doTRG_Cut << "\033[0m";
+       			if(doTRG_Cut)ss<< ", Width is " << width_TRG_Cut << " ns";
     			MYLOG_INFO(ss.str());
 		}
 
@@ -121,8 +122,8 @@ class Between2D{
     			doADC_Cut = on;
     			threshold_ADC_Cut = threshold;
     			std::stringstream ss;
-    			ss << std::boolalpha << "ADC_Cut is \033[1m" << doADC_Cut << "\033[0m"
-       				<< ", Threshold is " << threshold_ADC_Cut;
+    			ss << std::boolalpha << "ADC_Cut is \033[1;32m" << doADC_Cut << "\033[0m";
+       			if(doADC_Cut)ss<< ", Threshold is " << threshold_ADC_Cut<<" keV";
     			MYLOG_INFO(ss.str());
 		}
 
@@ -130,9 +131,16 @@ class Between2D{
     			doAll_ADC_Cut = on;
     			threshold_All_ADC_Cut = threshold;
     			std::stringstream ss;
-    			ss << std::boolalpha << "All_ADC_Cut is \033[1m" << doAll_ADC_Cut << "\033[0m"
-       				<< ", Threshold is " << threshold_All_ADC_Cut;
+    			ss << std::boolalpha << "All_ADC_Cut is \033[1;32m" << doAll_ADC_Cut << "\033[0m";
+       			if(doAll_ADC_Cut)ss<< ", Threshold is " << threshold_All_ADC_Cut<<" keV";
     			MYLOG_INFO(ss.str());
+		}
+		void SetBlind(bool i){
+			Blind=i;
+			std::stringstream ss;
+                        ss << std::boolalpha << "Blind is \033[1m" << Blind<< "\033[0m";
+                        MYLOG_INFO(ss.str());
+
 		}
 
 	private:
@@ -141,9 +149,18 @@ class Between2D{
 		void FillData2coin();
 		void FillData3coin_511();
 		void FillData3coin();
+		void IntegralCR();
+		void IntegralVR();
+		void BlindAndIntegralSR();
+		void MakeTag();
 		int total_bin=1500;
 		int min_bin=0;
 		int max_bin=1500;
+		static constexpr int NCR=7;
+		static constexpr int NVR=3;
+		static constexpr int NSR=2;
+		bool Blind=true;
+		std::string Tag="_";
 		std::string path="/home/fermi/rshibata/Tree/aftercalib/";
 		std::string type;
 		std::pair<TFile*,TFile*>f;//first = shibata second = usshi
@@ -153,6 +170,13 @@ class Between2D{
 		std::pair<TH2D*,TH2D*>hist_2coin;
 		std::pair<TH2D*,TH2D*>hist_3coin_511;
 		std::pair<TH2D*,TH2D*>hist_3coin;
+		std::pair<std::vector<double>,std::vector<double>>CR;
+		std::pair<std::vector<double>,std::vector<double>>dCR;
+		std::pair<std::vector<double>,std::vector<double>>VR;
+                std::pair<std::vector<double>,std::vector<double>>dVR;
+		std::pair<std::vector<double>,std::vector<double>>SR;
+                std::pair<std::vector<double>,std::vector<double>>dSR;
+		std::array<TH1D*,6>hist_1D;//for MERGEfermi!!
 		//Selection
 		
 		bool TDC_2coinCut(int pair);

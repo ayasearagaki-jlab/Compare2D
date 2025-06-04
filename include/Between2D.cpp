@@ -31,11 +31,26 @@
                 }
         
 	}
+
+	void Between2D::MakeTag(){
+		Tag="_";
+		std::ostringstream oss;
+		if(doTDC_2coinCut)oss << "TDC_2coin_" << std::fixed << std::setprecision(1) << width_TDC_2coinCut <<"_";
+		if(doTDC_3coinCut)oss << "TDC_3coin_" << std::fixed << std::setprecision(1) << width_TDC_3coinCut <<"_";
+		if(doExclude_2coinCut)oss<<"Exclude_2coin_"<<std::fixed << std::setprecision(0)<<threshold_Exclude_2coinCut<<"_";
+		if(doExclude_3coinCut)oss<<"Exclude_3coin_"<<std::fixed << std::setprecision(0)<<threshold_Exclude_3coinCut<<"_";
+		if(doTRG_Cut)oss <<"TRG_"<<std::fixed << std::setprecision(1)<<width_TRG_Cut<<"_";
+		if(doADC_Cut)oss<<"ADC_"<<std::fixed << std::setprecision(0)<<threshold_ADC_Cut<<"_";
+		if(doAll_ADC_Cut)oss<<"All_ADC_"<<std::fixed << std::setprecision(0)<<threshold_All_ADC_Cut<<"_";
+		Tag+=oss.str();
+	
+	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	//			MAIN 	For Loop		///////////////////////////////
 	///////////////////////////////////////////////////////////////////////////////////////
 
 	void Between2D::MakeTH2D(){
+		MakeTag();
 		if(hist_2coin.first){
 			delete hist_2coin.first;
 			hist_2coin.first=nullptr;
@@ -73,20 +88,43 @@
 
 
 		type="shibataDATA";
+		MYLOG_INFO("process "<<type);
+		std::cout<<std::endl;
 		for(Long64_t ientry=0;ientry<nentries.first;ientry++){
+			std::cout << "\rProcessing entry " << ientry << " / " << nentries.first<<" = "<<ientry*100 /nentries.first<< " %"<< std::flush;
 			tree.first->GetEntry(ientry);
 			FillData2coin();
 			FillData3coin_511();
 			FillData3coin();
 		}
-
+		std::cout<<std::endl;
+		IntegralCR();
+		IntegralVR();
+		BlindAndIntegralSR();
 		type="usshiDATA";
+		MYLOG_INFO("process "<<type);
+		std::cout<<std::endl;
 		for(Long64_t ientry=0;ientry<nentries.second;ientry++){
-                	tree.second->GetEntry(ientry);
+                	std::cout << "\rProcessing entry " << ientry << " / " << nentries.second<<" = "<<ientry*100 /nentries.second<< " %"<< std::flush;
+			tree.second->GetEntry(ientry);
 			FillData2coin();
 			FillData3coin_511();
 			FillData3coin();
 		}
+		std::cout<<std::endl;
+		IntegralCR();
+		IntegralVR();
+		BlindAndIntegralSR();
+		std::string outname="/home/fermi/rshibata/Tree/datacut/report"+Tag+".root";
+		TFile* out=new TFile(outname.c_str(),"RECREATE");
+		hist_2coin.first->Write();
+		hist_2coin.second->Write();
+		hist_3coin_511.first->Write();
+		hist_3coin_511.second->Write();
+		hist_3coin.first->Write();
+		hist_3coin.second->Write();
+
+
 
 	
 	}
@@ -285,6 +323,189 @@
 			}
 		}
 		return OK;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////
+	void Between2D::IntegralCR(){
+		const TH2D *h;
+		const TH2D *h_511;
+		if(type == "shibataDATA"){
+			h=hist_2coin.first;
+			h_511=hist_3coin_511.first;
+		}else{
+			h=hist_2coin.second;
+                        h_511=hist_3coin_511.second;
+		}
+		std::vector<double> &cr= (type == "shibataDATA") ? CR.first : CR.second;
+		std::vector<double> &dcr= (type == "shibataDATA") ? dCR.first : dCR.second;
+		double energy_xup[NCR]={600.0,1390.0,1390.0,1499.0,600.0,1390.0,1499.0};
+    		double energy_xlow[NCR]={450.0,1200.0,1200.0,200.0,450.0,1200.0,200.0};
+    		double energy_yup[NCR]={600.0,1390.0,600.0,1499.0,600.0,600.0,1499.0};
+    		double energy_ylow[NCR]={450.0,1200.0,450.0,200.0,450.0,450.0,200.0};
+	
+	
+
+    		int CR_xup[NCR];
+    		int CR_xlow[NCR];
+    		int CR_yup[NCR];
+    		int CR_ylow[NCR];
+		for(int i=0;i<4;i++){
+    			CR_xup[i]=h->GetXaxis()->FindBin(energy_xup[i]);
+        		CR_xlow[i]=h->GetXaxis()->FindBin(energy_xlow[i]);
+       			CR_yup[i]=h->GetYaxis()->FindBin(energy_yup[i]);
+     			CR_ylow[i]=h->GetYaxis()->FindBin(energy_ylow[i]);
+		}
+    		for(int i=4;i<NCR;i++){
+    			CR_xup[i]=h_511->GetXaxis()->FindBin(energy_xup[i]);
+     			CR_xlow[i]=h_511->GetXaxis()->FindBin(energy_xlow[i]);
+      			CR_yup[i]=h_511->GetYaxis()->FindBin(energy_yup[i]);
+      			CR_ylow[i]=h_511->GetYaxis()->FindBin(energy_ylow[i]);
+		}
+		std::ostringstream msg;
+		msg<<"Caluculating "<<type<<" CR..."<<std::endl;
+		msg<<"/////////////////////////////////"<<std::endl<<"CR_i\tCounting\t+-Errors"<<std::endl;
+
+
+		for(int i=0;i<4;i++){
+			double value,error;
+         		value=h->IntegralAndError(CR_xlow[i],CR_xup[i],CR_ylow[i],CR_yup[i],error);
+			cr.push_back(value);
+           		dcr.push_back(error);
+            		msg<<"CR_"<<i<<"\t"<<right<<setw(9)<<cr.at(i)<<"\t+-"<<dcr.at(i)<<std::endl;
+     		}
+		for(int i=4;i<NCR;i++){
+			double value,error;
+			value=h_511->IntegralAndError(CR_xlow[i],CR_xup[i],CR_ylow[i],CR_yup[i],error);
+			cr.push_back(value);
+            		dcr.push_back(error);
+            		msg<<"CR_"<<i<<"\t"<<right<<setw(9)<<cr.at(i)<<"\t+-"<<dcr.at(i)<<std::endl;
+      		}
+		msg<<"/////////////////////////////////"<<std::endl;
+		MYLOG_INFO(msg.str());
+		MYLOG_INFO("End Caluculating "<<type<<" CR"<<std::endl);
+
+
+	}
+
+	void Between2D::IntegralVR(){
+		TH2D *h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
+		std::vector<double> &vr= (type == "shibataDATA") ? VR.first : VR.second;
+                std::vector<double> &dvr= (type == "shibataDATA") ? dVR.first : dVR.second;
+	
+		double energy_xup[NVR]={600.0,1390.0,1499};
+   		double energy_xlow[NVR]={450.0,1200.0,200};
+    		double energy_yup[NVR]={600.0,600.0,1499};
+    		double energy_ylow[NVR]={450.0,450.0,200};
+	
+		int VR_xup[NVR];
+    		int VR_xlow[NVR]; 
+    		int VR_yup[NVR];
+    		int VR_ylow[NVR];
+
+		for(int i=0;i<NVR;i++){
+                	VR_xup[i]=h->GetXaxis()->FindBin(energy_xup[i]);
+                	VR_xlow[i]=h->GetXaxis()->FindBin(energy_xlow[i]);
+        
+                	VR_yup[i]=h->GetYaxis()->FindBin(energy_yup[i]);
+                	VR_ylow[i]=h->GetYaxis()->FindBin(energy_ylow[i]);
+  		}
+		std::ostringstream msg;
+		msg<<"Caluculating "<<type<<" VR..."<<std::endl;
+		msg<<"/////////////////////////////////"<<std::endl<<"VR_i\tCounting\t+-Errors"<<std::endl;
+
+
+		for(int i=0;i<NVR;i++){
+			double value,error;
+        		value=h->IntegralAndError(VR_xlow[i],VR_xup[i],VR_ylow[i],VR_yup[i],error);
+			vr.push_back(value);
+        		dvr.push_back(error);
+        		msg<<"VR_"<<i<<"\t"<<right<<setw(9)<<vr.at(i)<<"\t+-"<<dvr.at(i)<<std::endl;
+     		}
+	 	MYLOG_INFO(msg.str());
+
+	}
+	void Between2D::BlindAndIntegralSR(){
+		TH2D *h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
+		std::vector<double> &sr= (type == "shibataDATA") ? SR.first : SR.second;
+                std::vector<double> &dsr= (type == "shibataDATA") ? dSR.first : dSR.second;
+		double energy_xup[NSR]={1200.0,1499.0};
+    		double energy_xlow[NSR]={600.0,1390.0};
+    		double energy_yup[NSR]={1200.0,1499.0};
+    		double energy_ylow[NSR]={600.0,600.0};
+		
+		int SR_xup[NSR];
+    		int SR_xlow[NSR];
+    		int SR_yup[NSR];
+    		int SR_ylow[NSR];
+		for(int i=0;i<NSR;i++){
+			SR_xup[i]=h->GetXaxis()->FindBin(energy_xup[i]);
+        		SR_xlow[i]=h->GetXaxis()->FindBin(energy_xlow[i]);
+
+        		SR_yup[i]=h->GetYaxis()->FindBin(energy_yup[i]);
+        		SR_ylow[i]=h->GetYaxis()->FindBin(energy_ylow[i]);
+  		}
+
+		if(Blind){
+			MYLOG_INFO("Make Blind");
+			for(int i=0;i<NSR;i++){
+				for (int ix = SR_xlow[i]; ix <= SR_xlow[i]; ++ix) {
+    				for (int iy = SR_xlow[i]; iy <= SR_yup[i]; ++iy) {
+        				h->SetBinContent(ix, iy, 0);
+    			}}}
+		}
+		
+		std::ostringstream msg;
+		msg<<"Caluculating "<<type<<"  SR..."<<std::endl;
+		msg<<"/////////////////////////////////"<<std::endl<<"SR_i\tCounting\t+-Errors"<<std::endl;
+
+
+		for(int i=0;i<NSR;i++){
+			double value,error;
+        		value=h->IntegralAndError(SR_xlow[i],SR_xup[i],SR_ylow[i],SR_yup[i],error);
+			sr.push_back(value);
+			dsr.push_back(error);
+			msg<<"SR_"<<i<<"\t"<<right<<setw(9)<<sr.at(i)<<"\t+-"<<dsr.at(i)<<std::endl;
+		}
+     	
+		MYLOG_INFO(msg.str());
+
+
+
+	}
+	void Between2D::MakeReport(){
+		MakeTag();
+		const std::string filename = "/home/fermi/rshibata/Tree/datacut/report"+Tag+".csv";
+		std::ofstream fout(filename);
+    		if (!fout.is_open()) {
+        		MYLOG_ERROR("Failed to open file: " << filename);
+        		return;
+    		}
+	
+		fout << "# Region_i,shibataDATA,usshiDATA,ratio,d_shibata,d_usshi\n";
+		auto dump = [&](const std::string& region,
+                    	const std::pair<std::vector<double>, std::vector<double>>& main,
+                    	const std::pair<std::vector<double>, std::vector<double>>& err) {
+        		size_t n = main.first.size();
+        		for (size_t i = 0; i < n; ++i) {
+            			double s = main.first[i];
+            			double u = main.second[i];
+            			double ratio = (u!= 0) ? s / u : 0;
+            			double ds = (i < err.first.size()) ? err.first[i] : 0;
+            			double du = (i < err.second.size()) ? err.second[i] : 0;
+            
+				fout << region << i << "," << s << "," << u << "," << ratio << "," << ds << "," << du << "\n";
+        		}
+    		};
+		
+		dump("CR", CR, dCR);
+    		dump("VR", VR, dVR);
+    		dump("SR", SR, dSR);
+		
+		fout << "\n# TotalEntries,usshiDATA,shibataDATA\n";
+    		fout << "nentries," << nentries.first << "," << nentries.second << ","<<(double)nentries.first/nentries.second<<"\n";
+
+    		fout.close();
+		MYLOG_INFO("Comparison result saved to: " << filename);
 	}
 
 #endif

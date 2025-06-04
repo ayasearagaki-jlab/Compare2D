@@ -10,10 +10,10 @@ void Calibration::MakeTreeRaw(){
 	std::vector<std::vector<TH1D*>>hist_TDC(6,std::vector<TH1D*>(6));
 	for(int PMTi=0;PMTi<6;++PMTi){
 		for(int sPMTi=0;sPMTi<6;++sPMTi){
-			hist_TDC.at(PMTi).at(sPMTi)=new TH1D(Form("TDC%dminusTDC%d",PMTi+1,sPMTi+1),Form("TDC%d-TDC%d",PMTi+1,sPMTi+1),1000,0,1000);
+			hist_TDC.at(PMTi).at(sPMTi)=new TH1D(Form("TDC%dminusTDC%d",PMTi+1,sPMTi+1),Form("TDC%d-TDC%d",PMTi+1,sPMTi+1),2000,-1000,1000);
 		}
 	}
-	TH1D* hist_TRG=new TH1D("TRG","TRG",1000,0,1000);
+	TH1D* hist_TRG=new TH1D("TRG","TRG",2000,-1000,1000);
 
 
 	int num;

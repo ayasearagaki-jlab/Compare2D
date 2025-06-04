@@ -5,7 +5,7 @@
 #include <TString.h>
 #include <iostream>
 
-std::string type = "usshiDATA";//FIXME
+std::string type = "shibataDATA";//FIXME
 
 void MergeTree() {
     std::string path = "/home/fermi/rshibata/Tree/aftercalib/" + type + "/";
