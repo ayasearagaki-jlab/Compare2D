@@ -40,6 +40,7 @@
 		if(doExclude_2coinCut)oss<<"Exclude_2coin_"<<std::fixed << std::setprecision(0)<<threshold_Exclude_2coinCut<<"_";
 		if(doExclude_3coinCut)oss<<"Exclude_3coin_"<<std::fixed << std::setprecision(0)<<threshold_Exclude_3coinCut<<"_";
 		if(doTRG_Cut)oss <<"TRG_"<<std::fixed << std::setprecision(1)<<width_TRG_Cut<<"_";
+		if(doADC_Cut_3coin)oss<<"ADC_Cut_3coin_"<<std::fixed << std::setprecision(0)<<threshold_ADC_Cut_3coin<<"_";
 		if(doADC_Cut)oss<<"ADC_"<<std::fixed << std::setprecision(0)<<threshold_ADC_Cut<<"_";
 		if(doAll_ADC_Cut)oss<<"All_ADC_"<<std::fixed << std::setprecision(0)<<threshold_All_ADC_Cut<<"_";
 		Tag+=oss.str();
@@ -165,7 +166,7 @@
 		 const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		 for(int PMTi=0;PMTi<6/2;++PMTi){
                         bool tofilled3coin_511=true;
-			int nth=-1;
+			std::vector<int> nth;
                         energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
                         tofilled3coin_511=tofilled3coin_511&&TRG_Cut();
                         tofilled3coin_511=tofilled3coin_511&&TDC_2coinCut(PMTi);
@@ -173,6 +174,7 @@
                         tofilled3coin_511=tofilled3coin_511&&Exclude_3coinCut(PMTi,nth);
 			tofilled3coin_511=tofilled3coin_511&&TDC_3coinCut(PMTi,nth);
                         tofilled3coin_511=tofilled3coin_511&&ADC_Cut(PMTi);
+			tofilled3coin_511=tofilled3coin_511&&ADC_Cut_3coin(PMTi,nth);
                         tofilled3coin_511=tofilled3coin_511&&All_ADC_Cut();
 
                         if(tofilled3coin_511){
@@ -193,7 +195,7 @@
                  const Event& ev = (type == "shibataDATA") ? event.first : event.second;
                  for(int PMTi=0;PMTi<6/2;++PMTi){
                         bool tofilled3coin=true;
-                        int nth=-1;
+			std::vector<int> nth;
                         energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
                         tofilled3coin=tofilled3coin&&TRG_Cut();
                         tofilled3coin=tofilled3coin&&TDC_2coinCut(PMTi);
@@ -201,6 +203,7 @@
                         tofilled3coin=tofilled3coin&&Exclude_3coinCut(PMTi,nth);
                         tofilled3coin=tofilled3coin&&TDC_3coinCut(PMTi,nth);
                         tofilled3coin=tofilled3coin&&ADC_Cut(PMTi);
+			tofilled3coin=tofilled3coin&&ADC_Cut_3coin(PMTi,nth);
                         tofilled3coin=tofilled3coin&&All_ADC_Cut();
 
                         if(tofilled3coin){
@@ -220,8 +223,9 @@
 	///////////////////////////////////////////////////////////////////////
 	
 
-	bool Between2D::Find3coin(int ener,int &num,int pair){
+	bool Between2D::Find3coin(int ener,std::vector<int> &num,int pair){
 		double thre_up,thre_low;
+		num.clear();
 		if(ener==511){
 			thre_up=600;
 			thre_low=450;
@@ -239,8 +243,7 @@
 		for(int j=0;j<4;++j){
 			if(ev.E[arg_3coin.at(pair).at(j)]>thre_low&&ev.E[arg_3coin.at(pair).at(j)]<thre_up){
                                 OK=true;
-				num=j;
-                                break;
+				num.push_back(j);
 			}
 			
 		}
@@ -258,13 +261,24 @@
 		return TMath::Abs(ev.TDC_2coin.at(pair))<=width_TDC_2coinCut;
 	}
 	
-	bool Between2D::TDC_3coinCut(int pair,int num){
+	bool Between2D::TDC_3coinCut(int pair,std::vector<int> &num){
                 if(!doTDC_3coinCut) return true;
-		if(num<0||num>=4) return false;
+		if(num.size()==0)return false;
+		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
+		bool OK=false;
+		for(int i=0;i<num.size();++i){
+			if(num.at(i)<0||num.at(i)>=4) continue;
+			if(TMath::Abs(ev.TDC_3coin.at(pair).at(num.at(i)))<=width_TDC_3coinCut){
+				OK=true;
+				
+			}else{
+				num.at(i)=-1;	
+			}
 
-                const Event& ev = (type == "shibataDATA") ? event.first : event.second;
+		}
 
-                return TMath::Abs(ev.TDC_3coin.at(pair).at(num))<=width_TDC_3coinCut;
+		
+                return OK;
         }
 
 	bool Between2D::Exclude_2coinCut(int pair){
@@ -281,20 +295,30 @@
 		return OK;
 	}
 	
-	bool Between2D::Exclude_3coinCut(int pair,int num){
+	bool Between2D::Exclude_3coinCut(int pair,std::vector<int> &num){
                 if(!doExclude_3coinCut)return true;
-		if(num<0||num>=4) return false;
-
+		if(num.size()==0)return false;
                 const Event& ev = (type == "shibataDATA") ? event.first : event.second;
-                bool OK=true;
-                for(int j=0;j<4;++j){
-			if(j==num)continue;
-                        if(ev.E[arg_3coin.at(pair).at(j)]>threshold_Exclude_2coinCut){
-                                OK=false;
-                                break;
-                        }
-                }
-                return OK;
+                bool OK=false;
+                for(int i=0;i<num.size();++i){
+			bool exclude3coin=true;
+			if(num.at(i)<0||num.at(i)>=4) continue;
+			for(int j=0;j<4;++j){
+				if(j==num.at(i))continue;
+                        	if(ev.E[arg_3coin.at(pair).at(j)]>threshold_Exclude_2coinCut){
+                                	exclude3coin=false;
+					break;
+                        	}
+                	}
+			if(exclude3coin){
+				OK=true;
+			}else{
+				num.at(i)=-1;
+			}
+		}
+		return OK;
+		
+                
         }
 
 
@@ -311,6 +335,27 @@
 		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		return (TMath::Abs(ev.E.at(2*pair)-ev.E_narrow.at(2*pair))<=threshold_ADC_Cut)&&(TMath::Abs(ev.E.at((2*pair+3)%6)-ev.E_narrow.at((2*pair+3)%6))<=threshold_ADC_Cut);
 	}
+	
+	bool Between2D::ADC_Cut_3coin(int pair,std::vector<int> &num){
+		if(!doADC_Cut_3coin)return true;
+		if(num.size()==0)return false;
+		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
+		bool OK=false;
+                for(int i=0;i<num.size();++i){
+                        if(num.at(i)<0||num.at(i)>=4) continue;
+                        if(TMath::Abs(ev.E.at(arg_3coin.at(pair).at(num.at(i)))-ev.E_narrow.at(arg_3coin.at(pair).at(num.at(i))))<=threshold_ADC_Cut_3coin){
+                                OK=true;
+                        }else{
+				num.at(i)=-1;
+			}
+
+                }
+
+
+                return OK;
+	}
+
+
 	bool Between2D::All_ADC_Cut(){
 		if(!doAll_ADC_Cut) return true;
 

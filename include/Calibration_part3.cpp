@@ -91,11 +91,26 @@ void Calibration::MakeFinalTree(){
 		}
 		diff_TRG=d.TRG-TRG_peak;
 		for(int PMTi=0;PMTi<6/2;++PMTi){
-			diff_TDC_2coin.at(PMTi)=d.TDC.at(PMTi*2)-d.TDC.at((2*PMTi+3)%6)-TDC_peak.at(PMTi*2).at((2*PMTi+3)%6);
-			if(type=="shibataDATA")diff_TDC_high.at(PMTi)=d.TDC.at(PMTi*2)-d.TDC_high.at(PMTi)-TDC_peak.at(PMTi*2).at(PMTi*2);
-			
+			if(d.TDC.at(PMTi*2)!=-4444&&d.TDC.at((2*PMTi+3)%6)!=-4444){
+				diff_TDC_2coin.at(PMTi)=d.TDC.at(PMTi*2)-d.TDC.at((2*PMTi+3)%6)-TDC_peak.at(PMTi*2).at((2*PMTi+3)%6);
+			}else{
+				diff_TDC_2coin.at(PMTi)=-4444;
+			}
+			if(type=="shibataDATA"){
+				if(d.TDC.at(PMTi*2)!=-4444&&d.TDC_high.at(PMTi)!=-4444){
+					diff_TDC_high.at(PMTi)=d.TDC.at(PMTi*2)-d.TDC_high.at(PMTi)-TDC_peak.at(PMTi*2).at(PMTi*2);
+				}else if(d.TDC_high.at(PMTi)==-4444&&d.TDC.at(PMTi*2)!=-4444){
+					diff_TDC_high.at(PMTi)=0;
+				}else{
+					 diff_TDC_high.at(PMTi)=-4444;
+				}
+			}
 			for(int j=0;j<4;j++){
-				diff_TDC_3coin.at(PMTi).at(j)=d.TDC.at(2*PMTi)-d.TDC.at(arg_3coin.at(PMTi).at(j))-TDC_peak.at(2*PMTi).at(arg_3coin.at(PMTi).at(j));
+				if(d.TDC.at(2*PMTi)!=-4444&&d.TDC.at(arg_3coin.at(PMTi).at(j))!=-4444){
+					diff_TDC_3coin.at(PMTi).at(j)=d.TDC.at(2*PMTi)-d.TDC.at(arg_3coin.at(PMTi).at(j))-TDC_peak.at(2*PMTi).at(arg_3coin.at(PMTi).at(j));
+				}else{
+					diff_TDC_3coin.at(PMTi).at(j)=-4444;
+				}
 			}
 		
 		}

@@ -82,19 +82,37 @@ void Calibration::MakeTreeRaw(){
 				MYLOG_ERROR("type is broken type = "<<type);
 				return;
 			}
+			if(TDC1==0)TDC1=-4444;
+			if(TDC2==0)TDC2=-4444;
+			if(TDC3==0)TDC3=-4444;
+			if(TDC4==0)TDC4=-4444;
+			if(TDC5==0)TDC5=-4444;
+			if(TDC6==0)TDC6=-4444;
+			if(type=="shibataDATA"){
+				if(TDC_high1==0)TDC_high1=-4444;
+				if(TDC_high3==0)TDC_high3=-4444;
+				if(TDC_high5==0)TDC_high5=-4444;
+			}
+			
+			double TDC_values[6] = {TDC1, TDC2, TDC3, TDC4, TDC5, TDC6};
+                        double TDC_values_high[6]={TDC_high1,0,TDC_high3,0,TDC_high5,0};
+			
+
 			tree->Fill();	
 			hist_TRG->Fill(TDC7);
 
-			double TDC_values[6] = {TDC1, TDC2, TDC3, TDC4, TDC5, TDC6};
-			double TDC_values_high[6]={TDC_high1,0,TDC_high3,0,TDC_high5,0};
 			
 			for(int PMTi=0;PMTi<6;++PMTi){
                 		for(int sPMTi=0;sPMTi<6;++sPMTi){
 					if(type=="shibataDATA"&&((PMTi==0&&sPMTi==0)||(PMTi==2&&sPMTi==2)||(PMTi==4&&sPMTi==4))){//calcurate TDC high threshold 
-						hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values_high[sPMTi]);
-					}else{
-                        			hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values[sPMTi]);
-                			}
+						if(TDC_values[PMTi]!=-4444&&TDC_values_high[sPMTi]!=-4444){
+							hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values_high[sPMTi]);
+						}
+					}else{	
+						if(TDC_values[PMTi]!=-4444&&TDC_values[sPMTi]!=-4444){
+                        				hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values[sPMTi]);
+						}
+					}
 				}
         		}
 

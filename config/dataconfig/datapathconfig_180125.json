@@ -14,23 +14,23 @@
             -2.0,
             -7.0,
             1.0,
-            -8.0
+            -7.0
         ],
         [
             -1.0,
             2.0,
             0.0,
-            -3.0,
+            -2.0,
             4.0,
             -5.0
         ],
         [
             2.0,
             7.0,
-            3.0,
+            2.0,
             0.0,
             8.0,
-            -3.0
+            -1.0
         ],
         [
             -4.0,
@@ -42,20 +42,20 @@
         ],
         [
             6.0,
-            8.0,
+            7.0,
             5.0,
-            3.0,
+            1.0,
             8.0,
             0.0
         ]
     ],
     "TRG": 277.0,
-    "date": "180223",
-    "file_number": 3,
-    "mode": "Default_Done",
+    "date": "180125",
+    "file_number": 2,
+    "mode": "Not",
     "paths": {
         "lower": "_172800s_test.txt",
-        "upper": "/home/fermi/rshibata/data/usshiDATA/180223/data_201802231300_"
+        "upper": "/home/fermi/rshibata/data/usshiDATA/180125/data_201801251330_"
     },
     "type": "usshiDATA"
 }

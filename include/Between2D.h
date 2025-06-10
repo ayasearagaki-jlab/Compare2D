@@ -127,6 +127,16 @@ class Between2D{
     			MYLOG_INFO(ss.str());
 		}
 
+		void SetConfig_ADC_Cut_3coin(bool on=false, double threshold=100.0) {
+                        doADC_Cut_3coin = on;
+                        threshold_ADC_Cut_3coin = threshold;
+                        std::stringstream ss;
+                        ss << std::boolalpha << "ADC_Cut_3coin is \033[1;32m" << doADC_Cut_3coin << "\033[0m";
+                        if(doADC_Cut_3coin)ss<< ", Threshold is " << threshold_ADC_Cut_3coin<<" keV";
+                        MYLOG_INFO(ss.str());
+                }
+
+
 		void SetConfig_All_ADC_Cut(bool on=false, double threshold=100.0) {
     			doAll_ADC_Cut = on;
     			threshold_All_ADC_Cut = threshold;
@@ -184,7 +194,7 @@ class Between2D{
 		bool doTDC_2coinCut=false;
 		double width_TDC_2coinCut=6;
 
-		bool TDC_3coinCut(int pair,int num);
+		bool TDC_3coinCut(int pair,std::vector<int> &num);
                 //config of double coincidence cut
                 bool doTDC_3coinCut=false;
                 double width_TDC_3coinCut=12;
@@ -194,7 +204,7 @@ class Between2D{
 		bool doExclude_2coinCut=false;
 		double threshold_Exclude_2coinCut=200.0;
 
-		bool Exclude_3coinCut(int pair,int num);
+		bool Exclude_3coinCut(int pair,std::vector<int> &num);
                 //config of Exclude_3coinCut
                 bool doExclude_3coinCut=false;
                 double threshold_Exclude_3coinCut=200.0;
@@ -208,13 +218,19 @@ class Between2D{
 		//config of ADC_Cut
 		bool doADC_Cut=false;
 		double threshold_ADC_Cut=100.0;
+		
+		bool ADC_Cut_3coin(int pair,std::vector<int> &num);
+		//config of ADC Cut 3coin
+		bool doADC_Cut_3coin=false;
+		double threshold_ADC_Cut_3coin=100.0;
+
 
 		bool All_ADC_Cut();
 		//config of ADC_Cut
                 bool doAll_ADC_Cut=false;
                 double threshold_All_ADC_Cut=100.0;
 
-		bool Find3coin(int ener,int &num,int pair);
+		bool Find3coin(int ener,std::vector<int> &num,int pair);
 };
 #endif
 
