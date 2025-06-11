@@ -493,8 +493,8 @@
 		if(Blind){
 			MYLOG_INFO("Make Blind");
 			for(int i=0;i<NSR;i++){
-				for (int ix = SR_xlow[i]; ix <= SR_xlow[i]; ++ix) {
-    				for (int iy = SR_xlow[i]; iy <= SR_yup[i]; ++iy) {
+				for (int ix = SR_xlow[i]; ix <= SR_xup[i]; ++ix) {
+    				for (int iy = SR_ylow[i]; iy <= SR_yup[i]; ++iy) {
         				h->SetBinContent(ix, iy, 0);
     			}}}
 		}

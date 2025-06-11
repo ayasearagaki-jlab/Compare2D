@@ -82,6 +82,7 @@ class Calibration{
                 		total_bin_n=2000;
 				Rebin=30;
 				Rebin_n=8;
+				threADC=1500;
         		}else if(type=="usshiDATA"){
                 		total_bin=3500;
                 		max_bin=3500;
@@ -89,6 +90,7 @@ class Calibration{
                 		max_bin_n=1000;
 				Rebin=7;
                                 Rebin_n=4;
+				threADC=500;
         		}else{MYLOG_ERROR("type is incorrect "<<type);}
 			bin_density=(max_bin-0)/total_bin;
 			bin_density_n=(max_bin_n-0)/total_bin_n;
@@ -150,6 +152,7 @@ class Calibration{
 		int Rebin_n=0;
 		int bin_density=0;
 		int bin_density_n=0;
+		double threADC=0;
 		TCanvas *c_fit=nullptr;
 };
 #endif

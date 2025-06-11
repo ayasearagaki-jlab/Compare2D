@@ -96,21 +96,24 @@ void Calibration::MakeTreeRaw(){
 			
 			double TDC_values[6] = {TDC1, TDC2, TDC3, TDC4, TDC5, TDC6};
                         double TDC_values_high[6]={TDC_high1,0,TDC_high3,0,TDC_high5,0};
+			double ADC_values[6]={ADC1, ADC2, ADC3, ADC4, ADC5, ADC6};
 			
-
 			tree->Fill();	
 			hist_TRG->Fill(TDC7);
 
 			
 			for(int PMTi=0;PMTi<6;++PMTi){
                 		for(int sPMTi=0;sPMTi<6;++sPMTi){
+					bool adc_OK = (ADC_values[PMTi] > threADC &&ADC_values[(PMTi+3)%6] > threADC &&TDC_values[PMTi]!=-4444 &&TDC_values[(PMTi+3)%6]!=-4444);
+					if(!adc_OK) continue;
+
 					if(type=="shibataDATA"&&((PMTi==0&&sPMTi==0)||(PMTi==2&&sPMTi==2)||(PMTi==4&&sPMTi==4))){//calcurate TDC high threshold 
-						if(TDC_values[PMTi]!=-4444&&TDC_values_high[sPMTi]!=-4444){
+						if(TDC_values_high[sPMTi]!=-4444){
 							hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values_high[sPMTi]);
 						}
 					}else{	
-						if(TDC_values[PMTi]!=-4444&&TDC_values[sPMTi]!=-4444){
-                        				hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values[sPMTi]);
+						if(TDC_values[sPMTi]!=-4444&&ADC_values[sPMTi]>threADC){
+								hist_TDC.at(PMTi).at(sPMTi)->Fill(TDC_values[PMTi]-TDC_values[sPMTi]);
 						}
 					}
 				}
