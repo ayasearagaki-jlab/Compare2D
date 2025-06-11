@@ -52,40 +52,14 @@
 
 	void Between2D::MakeTH2D(){
 		MakeTag();
-		if(hist_2coin.first){
-			delete hist_2coin.first;
-			hist_2coin.first=nullptr;
-		}
-		if(hist_2coin.second){
-			delete hist_2coin.second;
-			hist_2coin.second=nullptr;
-		}
-		if(hist_3coin_511.first){
-			delete hist_3coin_511.first;
-			hist_3coin_511.first=nullptr;
-		}
-		if(hist_3coin_511.second){
-                        delete hist_3coin_511.second;
-                        hist_3coin_511.second=nullptr;
-                }
-		if(hist_3coin.first){
-                        delete hist_3coin.first;
-                        hist_3coin.first=nullptr;
-                }
-                if(hist_3coin.second){
-                        delete hist_3coin.second;
-                        hist_3coin.second=nullptr;
-                }
-
-
-		hist_2coin.first=new TH2D("hist_2coin_shibata","2coincidence shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
-		hist_2coin.second=new TH2D("hist_2coin_usshi","2coincidence usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		hist_2coin.first=std::make_shared<TH2D>("hist_2coin_shibata","2coincidence shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		hist_2coin.second=std::make_shared<TH2D>("hist_2coin_usshi","2coincidence usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
 		
-		hist_3coin_511.first=new TH2D("hist_3coin_511_shibata","3coincidence with 511 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
-                hist_3coin_511.second=new TH2D("hist_3coin_511_usshi","3coincidence with 511 kev usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		hist_3coin_511.first=std::make_shared<TH2D>("hist_3coin_511_shibata","3coincidence with 511 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+        hist_3coin_511.second=std::make_shared<TH2D>("hist_3coin_511_usshi","3coincidence with 511 kev usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
 		
-		hist_3coin.first=new TH2D("hist_3coin_shibata","3coincidence with 1275 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
-                hist_3coin.second=new TH2D("hist_3coin_usshi","3coincidence with 1275 kev usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		hist_3coin.first=std::make_shared<TH2D>("hist_3coin_shibata","3coincidence with 1275 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+        hist_3coin.second=std::make_shared<TH2D>("hist_3coin_usshi","3coincidence with 1275 kev usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
 
 
 		type="shibataDATA";
@@ -124,7 +98,230 @@
 		hist_3coin_511.second->Write();
 		hist_3coin.first->Write();
 		hist_3coin.second->Write();
+		out->Close();
+		
 
+
+
+	
+	}
+
+	void Between2D::MakeTH2D_MT(int nthreads = 4){
+		MakeTag();
+		MYLOG_INFO("MakeTH2D_MT with "<<nthreads<<" threads");
+
+		
+		ROOT::EnableImplicitMT(nthreads);
+		type="shibataDATA";
+                MYLOG_INFO("process "<<type);
+                std::cout<<std::endl;
+		auto hist_2coin_shibata=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_2coin_shibata","2coincidence shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		auto hist_3coin_511_shibata=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_3coin_511_shibata","3coincidence with 511 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		auto hist_3coin_shibata=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_3coin_shibata","3coincidence with 1275 keV shibata",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		std::string path_shibata=path+"shibataDATA.root";
+		ROOT::TTreeProcessorMT tp(path_shibata.c_str(),"tree");
+		tp.Process([=](TTreeReader& reader) {
+			TTreeReaderValue<Double_t> E1(reader, "E1");
+        	TTreeReaderValue<Double_t> E2(reader, "E2");
+        	TTreeReaderValue<Double_t> E3(reader, "E3");
+        	TTreeReaderValue<Double_t> E4(reader, "E4");
+        	TTreeReaderValue<Double_t> E5(reader, "E5");
+        	TTreeReaderValue<Double_t> E6(reader, "E6");
+
+        	TTreeReaderValue<Double_t> TRG(reader, "diff_TRG");
+			std::vector<TTreeReaderValue<Double_t>> TDC_2coin;
+        	std::vector<TTreeReaderValue<Double_t>> TDC_high;
+        	std::vector<std::vector<TTreeReaderValue<Double_t>>> TDC_3coin;
+
+			for (int PMTi = 0; PMTi < 3; ++PMTi) {
+            	std::string name_2c = Form("diff_TDC%dminusTDC%d", 2 * PMTi + 1, (2 * PMTi + 3) % 6 + 1);
+            	TDC_2coin.emplace_back(reader, name_2c.c_str());
+
+            	std::string name_high = Form("diff_TDC%dminusTDC%dhigh", PMTi * 2 + 1, PMTi * 2 + 1);
+            	TDC_high.emplace_back(reader, name_high.c_str());
+
+            	std::vector<TTreeReaderValue<Double_t>> sub_3coin;
+            	for (int j = 0; j < 4; ++j) {
+                	int idx = arg_3coin.at(PMTi).at(j) + 1;
+                	std::string name_3c = Form("diff_TDC%dminusTDC%d", 2 * PMTi + 1, idx);
+                	sub_3coin.emplace_back(reader, name_3c.c_str());
+            	}
+            	TDC_3coin.push_back(std::move(sub_3coin));
+        	}
+			while (reader.Next()) {
+				Event ev;
+				ev.E = { *E1, *E2, *E3, *E4, *E5, *E6 };
+				ev.TRG = *TRG;
+				for (int PMTi = 0; PMTi < 3; ++PMTi) {
+                	ev.TDC_2coin.at(PMTi) = *TDC_2coin.at(PMTi);
+                	ev.TDC_high.at(PMTi) = *TDC_high.at(PMTi);
+                	for (int j = 0; j < 4; ++j) {
+                    	ev.TDC_3coin.at(PMTi).at(j) = *TDC_3coin.at(PMTi).at(j);
+                	}
+            	}	
+			
+				for (int PMTi = 0; PMTi < 3; ++PMTi) {
+                	bool tofill = true;
+                	energy eee(ev.E[2 * PMTi], ev.E[(2 * PMTi + 3) % 6]);
+
+                	tofill = tofill && TRG_Cut(ev);
+					tofill = tofill && TDC_2coinCut(ev, PMTi);
+                	tofill = tofill && ADC_Cut(ev, PMTi);
+                	tofill = tofill && All_ADC_Cut(ev);
+
+                	if (tofill) {
+						bool tofill_2coin=tofill;
+						tofill_2coin = tofill_2coin && Exclude_2coinCut(ev, PMTi);
+
+						if(tofill_2coin)hist_2coin_shibata->Get()->Fill(eee.up, eee.low);
+                	}
+
+                // 511 keV判定（仮：実際には条件式があるはず）
+                	if (tofill) {
+						bool tofill_511=tofill;
+						std::vector<int> nth;
+						tofill_511 = tofill_511 && Find3coin(ev, 511, nth, PMTi);
+						tofill_511 = tofill_511 && Exclude_3coinCut(ev, PMTi, nth);
+						tofill_511 = tofill_511 && TDC_3coinCut(ev, PMTi, nth);
+						tofill_511 = tofill_511 && ADC_Cut_3coin(ev, PMTi, nth);
+
+						if (tofill_511) hist_3coin_511_shibata->Get()->Fill(eee.up, eee.low);
+						
+                	}
+
+                // 1275 keV判定（仮：条件追加可）
+                	if (tofill) {
+						bool tofill_3coin=tofill;
+						std::vector<int> nth;
+						tofill_3coin = tofill_3coin && Find3coin(ev, 1275, nth, PMTi);
+						tofill_3coin = tofill_3coin && Exclude_3coinCut(ev, PMTi, nth);
+						tofill_3coin = tofill_3coin && TDC_3coinCut(ev, PMTi, nth);
+						tofill_3coin = tofill_3coin && ADC_Cut_3coin(ev, PMTi, nth);
+
+						if (tofill_3coin) hist_3coin_shibata->Get()->Fill(eee.up, eee.low);
+						
+                	}
+            	}
+			}
+        
+		});
+		std::cout<<std::endl;
+		hist_2coin.first = hist_2coin_shibata->Merge();
+		//hist_2coin.first = merged_2coin.get(); 
+		hist_3coin_511.first = hist_3coin_511_shibata->Merge();
+		//hist_3coin_511.first = merged_3coin_511.get();
+		hist_3coin.first  = hist_3coin_shibata->Merge();
+		//hist_3coin.first = merged_3coin.get();
+		IntegralCR();
+		IntegralVR();
+		BlindAndIntegralSR();
+		type="usshiDATA";
+		MYLOG_INFO("process "<<type);
+		std::cout<<std::endl;
+		auto hist_2coin_usshi=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_2coin_usshi","2coincidence usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		auto hist_3coin_511_usshi=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_3coin_511_usshi","3coincidence with 511 keV usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		auto hist_3coin_usshi=std::make_shared<ROOT::TThreadedObject<TH2D>>("hist_3coin_usshi","3coincidence with 1275 keV usshi",total_bin,min_bin,max_bin,total_bin,min_bin,max_bin);
+		std::string path_usshi=path+"usshiDATA.root";
+		ROOT::TTreeProcessorMT tp_usshi(path_usshi.c_str(),"tree");
+		tp_usshi.Process([=](TTreeReader& reader) {
+			TTreeReaderValue<Double_t> E1(reader, "E1");
+			TTreeReaderValue<Double_t> E2(reader, "E2");
+			TTreeReaderValue<Double_t> E3(reader, "E3");
+			TTreeReaderValue<Double_t> E4(reader, "E4");
+			TTreeReaderValue<Double_t> E5(reader, "E5");
+			TTreeReaderValue<Double_t> E6(reader, "E6");
+
+			TTreeReaderValue<Double_t> TRG(reader, "diff_TRG");
+			std::vector<TTreeReaderValue<Double_t>> TDC_2coin;
+			std::vector<std::vector<TTreeReaderValue<Double_t>>> TDC_3coin;
+
+			for (int PMTi = 0; PMTi < 3; ++PMTi) {
+				std::string name_2c = Form("diff_TDC%dminusTDC%d", 2 * PMTi + 1, (2 * PMTi + 3) % 6 + 1);
+				TDC_2coin.emplace_back(reader, name_2c.c_str());
+
+
+				std::vector<TTreeReaderValue<Double_t>> sub_3coin;
+				for (int j = 0; j < 4; ++j) {
+					int idx = arg_3coin.at(PMTi).at(j) + 1;
+					std::string name_3c = Form("diff_TDC%dminusTDC%d", 2 * PMTi + 1, idx);
+					sub_3coin.emplace_back(reader, name_3c.c_str());
+				}
+				TDC_3coin.push_back(std::move(sub_3coin));
+			}
+			while (reader.Next()) {
+				Event ev;
+				ev.E = { *E1, *E2, *E3, *E4, *E5, *E6 };
+				ev.TRG = *TRG;
+				for (int PMTi = 0; PMTi < 3; ++PMTi) {
+					ev.TDC_2coin.at(PMTi) = *TDC_2coin.at(PMTi);
+					for (int j = 0; j < 4; ++j) {
+						ev.TDC_3coin.at(PMTi).at(j) = *TDC_3coin.at(PMTi).at(j);
+					}
+				}
+				for (int PMTi = 0; PMTi < 3; ++PMTi) {
+                	bool tofill = true;
+                	energy eee(ev.E[2 * PMTi], ev.E[(2 * PMTi + 3) % 6]);
+
+                	tofill = tofill && TRG_Cut(ev);
+                	tofill = tofill && TDC_2coinCut(ev, PMTi);
+                	tofill = tofill && ADC_Cut(ev, PMTi);
+                	tofill = tofill && All_ADC_Cut(ev);
+
+                	if (tofill) {
+						bool tofill_2coin=tofill;
+						tofill_2coin = tofill_2coin && Exclude_2coinCut(ev, PMTi);
+
+                    	if(tofill_2coin)hist_2coin_usshi->Get()->Fill(eee.up, eee.low);
+                	}
+
+                // 511 keV判定（仮：実際には条件式があるはず）
+                	if (tofill) {
+						bool tofill_511=tofill;
+						std::vector<int> nth;
+						tofill_511 = tofill_511 && Find3coin(ev, 511, nth, PMTi);
+						tofill_511 = tofill_511 && Exclude_3coinCut(ev, PMTi, nth);
+						tofill_511 = tofill_511 && TDC_3coinCut(ev, PMTi, nth);
+						tofill_511 = tofill_511 && ADC_Cut_3coin(ev, PMTi, nth);
+
+						if (tofill_511) hist_3coin_511_usshi->Get()->Fill(eee.up, eee.low);
+						
+                	}
+
+                // 1275 keV判定（仮：条件追加可）
+                	if (tofill) {
+						bool tofill_3coin=tofill;
+						std::vector<int> nth;
+						tofill_3coin = tofill_3coin && Find3coin(ev, 1275, nth, PMTi);
+						tofill_3coin = tofill_3coin && Exclude_3coinCut(ev, PMTi, nth);
+						tofill_3coin = tofill_3coin && TDC_3coinCut(ev, PMTi, nth);
+						tofill_3coin = tofill_3coin && ADC_Cut_3coin(ev, PMTi, nth);
+
+						if (tofill_3coin) hist_3coin_usshi->Get()->Fill(eee.up, eee.low);
+						
+                	}
+            	}
+			}
+
+		});
+		std::cout<<std::endl;
+		hist_2coin.second = hist_2coin_usshi->Merge();
+		//hist_2coin.second = merged_2coin_usshi.get();
+		hist_3coin_511.second = hist_3coin_511_usshi->Merge();
+		//hist_3coin_511.second = merged_3coin_511_usshi.get();
+		hist_3coin.second = hist_3coin_usshi->Merge();
+		//hist_3coin.second = merged_3coin_usshi.get();
+		IntegralCR();
+		IntegralVR();
+		BlindAndIntegralSR();
+		std::string outname="/home/fermi/rshibata/Tree/datacut/report"+Tag+".root";
+		TFile* out=new TFile(outname.c_str(),"RECREATE");
+		hist_2coin.first->Write();
+		hist_2coin.second->Write();
+		hist_3coin_511.first->Write();
+		hist_3coin_511.second->Write();
+		hist_3coin.first->Write();
+		hist_3coin.second->Write();
+		out->Close();
 
 
 	
@@ -143,11 +340,11 @@
 		for(int PMTi=0;PMTi<6/2;++PMTi){
 			bool tofilled2coin=true;
 			energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
-			tofilled2coin=tofilled2coin&&TRG_Cut();
-			tofilled2coin=tofilled2coin&&TDC_2coinCut(PMTi);
-			tofilled2coin=tofilled2coin&&Exclude_2coinCut(PMTi);
-			tofilled2coin=tofilled2coin&&ADC_Cut(PMTi);			
-			tofilled2coin=tofilled2coin&&All_ADC_Cut();	
+			tofilled2coin=tofilled2coin&&TRG_Cut(ev);
+			tofilled2coin=tofilled2coin&&TDC_2coinCut(ev,PMTi);
+			tofilled2coin=tofilled2coin&&Exclude_2coinCut(ev,PMTi);
+			tofilled2coin=tofilled2coin&&ADC_Cut(ev,PMTi);			
+			tofilled2coin=tofilled2coin&&All_ADC_Cut(ev);	
 			
 			if(tofilled2coin){
 				if(type == "shibataDATA")hist_2coin.first->Fill(eee.up,eee.low);
@@ -165,24 +362,24 @@
 		 }
 		 const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		 for(int PMTi=0;PMTi<6/2;++PMTi){
-                        bool tofilled3coin_511=true;
+            bool tofilled3coin_511=true;
 			std::vector<int> nth;
-                        energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
-                        tofilled3coin_511=tofilled3coin_511&&TRG_Cut();
-                        tofilled3coin_511=tofilled3coin_511&&TDC_2coinCut(PMTi);
-			tofilled3coin_511=tofilled3coin_511&&Find3coin(511,nth,PMTi);
-                        tofilled3coin_511=tofilled3coin_511&&Exclude_3coinCut(PMTi,nth);
-			tofilled3coin_511=tofilled3coin_511&&TDC_3coinCut(PMTi,nth);
-                        tofilled3coin_511=tofilled3coin_511&&ADC_Cut(PMTi);
-			tofilled3coin_511=tofilled3coin_511&&ADC_Cut_3coin(PMTi,nth);
-                        tofilled3coin_511=tofilled3coin_511&&All_ADC_Cut();
+            energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
+            tofilled3coin_511=tofilled3coin_511&&TRG_Cut(ev);
+            tofilled3coin_511=tofilled3coin_511&&TDC_2coinCut(ev,PMTi);
+			tofilled3coin_511=tofilled3coin_511&&Find3coin(ev,511,nth,PMTi);
+            tofilled3coin_511=tofilled3coin_511&&Exclude_3coinCut(ev,PMTi,nth);
+			tofilled3coin_511=tofilled3coin_511&&TDC_3coinCut(ev,PMTi,nth);
+            tofilled3coin_511=tofilled3coin_511&&ADC_Cut(ev,PMTi);
+			tofilled3coin_511=tofilled3coin_511&&ADC_Cut_3coin(ev,PMTi,nth);
+            tofilled3coin_511=tofilled3coin_511&&All_ADC_Cut(ev);
 
-                        if(tofilled3coin_511){
-                                if(type == "shibataDATA")hist_3coin_511.first->Fill(eee.up,eee.low);
-                                else hist_3coin_511.second->Fill(eee.up,eee.low);
+            if(tofilled3coin_511){
+                if(type == "shibataDATA")hist_3coin_511.first->Fill(eee.up,eee.low);
+                else hist_3coin_511.second->Fill(eee.up,eee.low);
 
-                        }
-                }
+            }
+        }
 
 
 	}
@@ -194,23 +391,23 @@
                  }
                  const Event& ev = (type == "shibataDATA") ? event.first : event.second;
                  for(int PMTi=0;PMTi<6/2;++PMTi){
-                        bool tofilled3coin=true;
-			std::vector<int> nth;
-                        energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
-                        tofilled3coin=tofilled3coin&&TRG_Cut();
-                        tofilled3coin=tofilled3coin&&TDC_2coinCut(PMTi);
-                        tofilled3coin=tofilled3coin&&Find3coin(1275,nth,PMTi);
-                        tofilled3coin=tofilled3coin&&Exclude_3coinCut(PMTi,nth);
-                        tofilled3coin=tofilled3coin&&TDC_3coinCut(PMTi,nth);
-                        tofilled3coin=tofilled3coin&&ADC_Cut(PMTi);
-			tofilled3coin=tofilled3coin&&ADC_Cut_3coin(PMTi,nth);
-                        tofilled3coin=tofilled3coin&&All_ADC_Cut();
+                    bool tofilled3coin=true;
+					std::vector<int> nth;
+                    energy eee(ev.E[2*PMTi],ev.E[(2*PMTi+3)%6]);
+                    tofilled3coin=tofilled3coin&&TRG_Cut(ev);
+                    tofilled3coin=tofilled3coin&&TDC_2coinCut(ev,PMTi);
+                    tofilled3coin=tofilled3coin&&Find3coin(ev,1275,nth,PMTi);
+                    tofilled3coin=tofilled3coin&&Exclude_3coinCut(ev,PMTi,nth);
+                    tofilled3coin=tofilled3coin&&TDC_3coinCut(ev,PMTi,nth);
+                    tofilled3coin=tofilled3coin&&ADC_Cut(ev,PMTi);
+					tofilled3coin=tofilled3coin&&ADC_Cut_3coin(ev,PMTi,nth);
+                    tofilled3coin=tofilled3coin&&All_ADC_Cut(ev);
 
-                        if(tofilled3coin){
-                                if(type == "shibataDATA")hist_3coin.first->Fill(eee.up,eee.low);
-                                else hist_3coin.second->Fill(eee.up,eee.low);
+                    if(tofilled3coin){
+                            if(type == "shibataDATA")hist_3coin.first->Fill(eee.up,eee.low);
+                            else hist_3coin.second->Fill(eee.up,eee.low);
 
-                        }
+                    }
                 }
 
 
@@ -223,7 +420,7 @@
 	///////////////////////////////////////////////////////////////////////
 	
 
-	bool Between2D::Find3coin(int ener,std::vector<int> &num,int pair){
+	bool Between2D::Find3coin(const Event &ev,int ener,std::vector<int> &num,int pair){
 		double thre_up,thre_low;
 		num.clear();
 		if(ener==511){
@@ -237,7 +434,6 @@
 			return false;
 		}
 		
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 
 		bool OK=false;
 		for(int j=0;j<4;++j){
@@ -253,18 +449,17 @@
 	
 	}
 
-	bool Between2D::TDC_2coinCut(int pair){
+	bool Between2D::TDC_2coinCut(const Event &ev,int pair){
 		if(!doTDC_2coinCut) return true;
 		
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
+		//const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 
 		return TMath::Abs(ev.TDC_2coin.at(pair))<=width_TDC_2coinCut;
 	}
 	
-	bool Between2D::TDC_3coinCut(int pair,std::vector<int> &num){
+	bool Between2D::TDC_3coinCut(const Event &ev,int pair,std::vector<int> &num){
                 if(!doTDC_3coinCut) return true;
 		if(num.size()==0)return false;
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		bool OK=false;
 		for(int i=0;i<num.size();++i){
 			if(num.at(i)<0||num.at(i)>=4) continue;
@@ -281,10 +476,9 @@
                 return OK;
         }
 
-	bool Between2D::Exclude_2coinCut(int pair){
+	bool Between2D::Exclude_2coinCut(const Event &ev,int pair){
 		if(!doExclude_2coinCut)return true;
 
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		bool OK=true;
 		for(int j=0;j<4;++j){
 			if(ev.E[arg_3coin.at(pair).at(j)]>threshold_Exclude_2coinCut){
@@ -295,12 +489,12 @@
 		return OK;
 	}
 	
-	bool Between2D::Exclude_3coinCut(int pair,std::vector<int> &num){
-                if(!doExclude_3coinCut)return true;
+	bool Between2D::Exclude_3coinCut(const Event &ev,int pair,std::vector<int> &num){
+        if(!doExclude_3coinCut)return true;
 		if(num.size()==0)return false;
-                const Event& ev = (type == "shibataDATA") ? event.first : event.second;
-                bool OK=false;
-                for(int i=0;i<num.size();++i){
+                
+        bool OK=false;
+        for(int i=0;i<num.size();++i){
 			bool exclude3coin=true;
 			if(num.at(i)<0||num.at(i)>=4) continue;
 			for(int j=0;j<4;++j){
@@ -322,24 +516,21 @@
         }
 
 
-	bool Between2D::TRG_Cut(){
+	bool Between2D::TRG_Cut(const Event &ev){
 		if(!doTRG_Cut)return true;
 
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		return TMath::Abs(ev.TRG) <= width_TRG_Cut;	
 	}
 
-	bool Between2D::ADC_Cut(int pair){
+	bool Between2D::ADC_Cut(const Event &ev,int pair){
 		if(!doADC_Cut) return true;
 
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		return (TMath::Abs(ev.E.at(2*pair)-ev.E_narrow.at(2*pair))<=threshold_ADC_Cut)&&(TMath::Abs(ev.E.at((2*pair+3)%6)-ev.E_narrow.at((2*pair+3)%6))<=threshold_ADC_Cut);
 	}
 	
-	bool Between2D::ADC_Cut_3coin(int pair,std::vector<int> &num){
+	bool Between2D::ADC_Cut_3coin(const Event &ev,int pair,std::vector<int> &num){
 		if(!doADC_Cut_3coin)return true;
 		if(num.size()==0)return false;
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		bool OK=false;
                 for(int i=0;i<num.size();++i){
                         if(num.at(i)<0||num.at(i)>=4) continue;
@@ -356,10 +547,9 @@
 	}
 
 
-	bool Between2D::All_ADC_Cut(){
+	bool Between2D::All_ADC_Cut(const Event &ev){
 		if(!doAll_ADC_Cut) return true;
 
-		const Event& ev = (type == "shibataDATA") ? event.first : event.second;
 		bool OK=true;
 		for(int PMTi=0;PMTi<6;++PMTi){
 			if(TMath::Abs(ev.E.at(PMTi)-ev.E_narrow.at(PMTi))>threshold_All_ADC_Cut){
@@ -372,14 +562,14 @@
 
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	void Between2D::IntegralCR(){
-		const TH2D *h;
-		const TH2D *h_511;
+		std::shared_ptr<TH2D> h;
+		std::shared_ptr<TH2D>h_511;
 		if(type == "shibataDATA"){
 			h=hist_2coin.first;
 			h_511=hist_3coin_511.first;
 		}else{
 			h=hist_2coin.second;
-                        h_511=hist_3coin_511.second;
+            h_511=hist_3coin_511.second;
 		}
 		std::vector<double> &cr= (type == "shibataDATA") ? CR.first : CR.second;
 		std::vector<double> &dcr= (type == "shibataDATA") ? dCR.first : dCR.second;
@@ -433,9 +623,9 @@
 	}
 
 	void Between2D::IntegralVR(){
-		TH2D *h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
+		std::shared_ptr<TH2D>h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
 		std::vector<double> &vr= (type == "shibataDATA") ? VR.first : VR.second;
-                std::vector<double> &dvr= (type == "shibataDATA") ? dVR.first : dVR.second;
+        std::vector<double> &dvr= (type == "shibataDATA") ? dVR.first : dVR.second;
 	
 		double energy_xup[NVR]={600.0,1390.0,1499};
    		double energy_xlow[NVR]={450.0,1200.0,200};
@@ -470,7 +660,7 @@
 
 	}
 	void Between2D::BlindAndIntegralSR(){
-		TH2D *h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
+		std::shared_ptr<TH2D>h=(type == "shibataDATA") ? hist_3coin.first : hist_3coin.second;
 		std::vector<double> &sr= (type == "shibataDATA") ? SR.first : SR.second;
                 std::vector<double> &dsr= (type == "shibataDATA") ? dSR.first : dSR.second;
 		double energy_xup[NSR]={1200.0,1499.0};

@@ -72,6 +72,7 @@ class Between2D{
 		}
 		
 		void MakeTH2D();
+		void MakeTH2D_MT(int nthreads = 4);
 		void MakeReport();
 		void SetConfig_TDC_2coinCut(bool on=false,double width=6){
 			doTDC_2coinCut=on;
@@ -177,60 +178,60 @@ class Between2D{
 		std::pair<TTree*,TTree*>tree;	
 		std::pair<Long64_t,Long64_t>nentries;
 		std::pair<Event,Event> event;
-		std::pair<TH2D*,TH2D*>hist_2coin;
-		std::pair<TH2D*,TH2D*>hist_3coin_511;
-		std::pair<TH2D*,TH2D*>hist_3coin;
+		std::pair<std::shared_ptr<TH2D>,std::shared_ptr<TH2D>>hist_2coin;
+		std::pair<std::shared_ptr<TH2D>,std::shared_ptr<TH2D>>hist_3coin_511;
+		std::pair<std::shared_ptr<TH2D>,std::shared_ptr<TH2D>>hist_3coin;
 		std::pair<std::vector<double>,std::vector<double>>CR;
 		std::pair<std::vector<double>,std::vector<double>>dCR;
 		std::pair<std::vector<double>,std::vector<double>>VR;
-                std::pair<std::vector<double>,std::vector<double>>dVR;
+        std::pair<std::vector<double>,std::vector<double>>dVR;
 		std::pair<std::vector<double>,std::vector<double>>SR;
-                std::pair<std::vector<double>,std::vector<double>>dSR;
+        std::pair<std::vector<double>,std::vector<double>>dSR;
 		std::array<TH1D*,6>hist_1D;//for MERGEfermi!!
 		//Selection
 		
-		bool TDC_2coinCut(int pair);
+		bool TDC_2coinCut(const Event &ev,int pair);
 		//config of double coincidence cut
 		bool doTDC_2coinCut=false;
 		double width_TDC_2coinCut=6;
 
-		bool TDC_3coinCut(int pair,std::vector<int> &num);
+		bool TDC_3coinCut(const Event &ev,int pair,std::vector<int> &num);
                 //config of double coincidence cut
                 bool doTDC_3coinCut=false;
                 double width_TDC_3coinCut=12;
 		
-		bool Exclude_2coinCut(int pair);
+		bool Exclude_2coinCut(const Event &ev,int pair);
 		//config of Exclude_2coinCut
 		bool doExclude_2coinCut=false;
 		double threshold_Exclude_2coinCut=200.0;
 
-		bool Exclude_3coinCut(int pair,std::vector<int> &num);
+		bool Exclude_3coinCut(const Event &ev,int pair,std::vector<int> &num);
                 //config of Exclude_3coinCut
                 bool doExclude_3coinCut=false;
                 double threshold_Exclude_3coinCut=200.0;
 		
-		bool TRG_Cut();
+		bool TRG_Cut(const Event &ev);
 		//config of TRG_Cut
 		bool doTRG_Cut=false;
 		double width_TRG_Cut=1.5;
 
-		bool ADC_Cut(int pair);
+		bool ADC_Cut(const Event &ev,int pair);
 		//config of ADC_Cut
 		bool doADC_Cut=false;
 		double threshold_ADC_Cut=100.0;
 		
-		bool ADC_Cut_3coin(int pair,std::vector<int> &num);
+		bool ADC_Cut_3coin(const Event &ev,int pair,std::vector<int> &num);
 		//config of ADC Cut 3coin
 		bool doADC_Cut_3coin=false;
 		double threshold_ADC_Cut_3coin=100.0;
 
 
-		bool All_ADC_Cut();
+		bool All_ADC_Cut(const Event &ev);
 		//config of ADC_Cut
                 bool doAll_ADC_Cut=false;
                 double threshold_All_ADC_Cut=100.0;
 
-		bool Find3coin(int ener,std::vector<int> &num,int pair);
+		bool Find3coin(const Event &ev,int ener,std::vector<int> &num,int pair);
 };
 #endif
 
